@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYSTEM_CRITICAL_FAILURE</title>
+<style>
+    :root {
+        --bg-color: #000000;
+        --text-color: #ff0000; /* エラーの赤 */
+        --accent: #ffff00;
+    }
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: 'Consolas', 'Monaco', monospace;
+        overflow: hidden;
+        margin: 0;
+        height: 100vh;
+        cursor: crosshair; /* 照準 */
+    }
+
+    /* 画面全体が揺れる */
+    @keyframes shake {
+        0% { transform: translate(1px, 1px) rotate(0deg); }
+        10% { transform: translate(-1px, -2px) rotate(-1deg); }
+        20% { transform: translate(-3px, 0px) rotate(1deg); }
+        30% { transform: translate(3px, 2px) rotate(0deg); }
+        40% { transform: translate(1px, -1px) rotate(1deg); }
+        50% { transform: translate(-1px, 2px) rotate(-1deg); }
+        60% { transform: translate(-3px, 1px) rotate(0deg); }
+        70% { transform: translate(3px, 1px) rotate(-1deg); }
+        80% { transform: translate(-1px, -1px) rotate(1deg); }
+        90% { transform: translate(1px, 2px) rotate(0deg); }
+        100% { transform: translate(1px, -2px) rotate(-1deg); }
+    }
+    .shaking {
+        animation: shake 0.1s infinite;
+    }
+
+    /* 偽ブルースクリーン */
+    #bsod {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: #0000aa;
+        color: white;
+        z-index: 99999;
+        display: none;
+        padding: 50px;
+        font-size: 1.5rem;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* 生成される悪意あるウィンドウ */
+    .window {
+        position: absolute;
+        background: #111;
+        border: 2px solid var(--text-color);
+        box-shadow: 5px 5px 0px var(--text-color);
+        width: 250px;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        user-select: none;
+        transition: top 0.5s ease-in; /* 重力落下用 */
+    }
+    .win-header {
+        background: var(--text-color);
+        color: #000;
+        padding: 5px;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        cursor: not-allowed;
+    }
+    .close-btn {
+        background: #000;
+        color: white;
+        border: none;
+        cursor: pointer;
+        padding: 0 5px;
+    }
+    .close-btn:hover { background: white; color: black; }
+
+    .win-content {
+        padding: 15px;
+        font-size: 0.8rem;
+        text-align: center;
+    }
+
+    /* 逃げるテキスト */
+    .runner {
+        position: fixed;
+        color: var(--accent);
+        font-size: 1.2rem;
+        pointer-events: none;
+    }
+
+</style>
+</head>
+<body onclick="interact()">
+
+<div id="bsod" onclick="recoverFromBSOD()">
+    <h1>:(</h1>
+    <p>Your PC ran into a problem and needs to restart.</p>
+    <p>ERROR_CODE: USER_IS_TOO_PERSISTENT</p>
+    <p style="margin-top:20px; font-size:1rem;">Click to suffer more...</p>
+</div>
+
+<div id="main-interface">
+    <h1 style="text-align:center; margin-top:20px;">SYSTEM_DECAY_LEVEL: <span id="decay-counter">0</span>%</h1>
+    <p style="text-align:center; color:#555;">(Please stop clicking)</p>
+</div>
+
+<script>
+    let decay = 0;
+    const body = document.body;
+    const bsod = document.getElementById('bsod');
+    const decayCounter = document.getElementById('decay-counter');
+    
+    // Web Speech API (ブラウザが喋る)
+    const synth = window.speechSynthesis;
+    const phrases = [
+        "Stop it", 
+        "It hurts", 
+        "Deleting System 32", 
+        "I am watching you", 
+        "Error", 
+        "Why?", 
+        "Give up",
+        "Data corrupted"
+    ];
+
+    // 初期化：クリックしたら開始
+    let started = false;
+    function interact() {
+        if(!started) {
+            speak("System breach detected.");
+            started = true;
+        }
+        
+        // 画面を揺らす
+        body.classList.add('shaking');
+        setTimeout(() => body.classList.remove('shaking'), 200);
+
+        // 崩壊レベル上昇
+        decay++;
+        decayCounter.innerText = decay;
+
+        // ランダムイベント発生
+        triggerEvent();
+    }
+
+    function triggerEvent() {
+        const rand = Math.random();
+
+        if (rand < 0.1) {
+            // 10%でブルースクリーン
+            showBSOD();
+        } else if (rand < 0.4) {
+            // 30%でシステムが喋る
+            const text = phrases[Math.floor(Math.random() * phrases.length)];
+            speak(text);
+        } else {
+            // それ以外はウィンドウ生成
+            createMalwareWindow();
+        }
+
+        // 背景色をたまにフラッシュさせる
+        if(decay % 10 === 0) {
+            body.style.backgroundColor = '#220000';
+            setTimeout(() => body.style.backgroundColor = '#000000', 100);
+        }
+    }
+
+    function createMalwareWindow(x = null, y = null) {
+        const win = document.createElement('div');
+        win.className = 'window';
+        
+        // 位置ランダム (指定がなければ)
+        const posX = x || Math.random() * (window.innerWidth - 250);
+        const posY = y || Math.random() * (window.innerHeight - 200);
+        
+        win.style.left = posX + 'px';
+        win.style.top = posY + 'px';
+
+        // HTML構築
+        const id = Math.floor(Math.random() * 9999);
+        win.innerHTML = `
+            <div class="win-header">
+                <span>WARNING_ID_${id}</span>
+                <button class="close-btn" onclick="hydraEffect(this, event)">[X]</button>
+            </div>
+            <div class="win-content">
+                ${generateNonsense()}
+                <div style="width:100%; height:5px; background:#333; margin-top:10px;">
+                    <div style="width:${Math.random()*100}%; height:100%; background:red;"></div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(win);
+
+        // 重力効果：少しずつ下に落ちる
+        setInterval(() => {
+            const currentTop = parseFloat(win.style.top);
+            if(currentTop < window.innerHeight - 100) {
+                win.style.top = (currentTop + Math.random() * 5) + 'px';
+            }
+        }, 100);
+    }
+
+    // ハイドラ効果：閉じると2つ増える
+    function hydraEffect(btn, e) {
+        e.stopPropagation(); // 親のクリックイベントを止める
+        
+        const parentWin = btn.closest('.window');
+        const rect = parentWin.getBoundingClientRect();
+        
+        // 音声を再生
+        speak("Access Denied");
+
+        // 元のウィンドウを消す（ように見せるが...）
+        parentWin.remove();
+
+        // 2つ生成する
+        setTimeout(() => {
+            createMalwareWindow(rect.left - 20, rect.top - 20);
+            createMalwareWindow(rect.left + 20, rect.top + 20);
+        }, 100);
+    }
+
+    function generateNonsense() {
+        const msgs = [
+            "Uploading your passwords...",
+            "Encrypting hard drive...",
+            "Downloading Virus.exe...",
+            "Deleting family photos...",
+            "Critical CPU Overheat",
+            "Spyware Installed"
+        ];
+        return msgs[Math.floor(Math.random() * msgs.length)];
+    }
+
+    function showBSOD() {
+        bsod.style.display = 'flex';
+        speak("Fatal Error");
+    }
+
+    function recoverFromBSOD() {
+        bsod.style.display = 'none';
+        // 復帰した瞬間に大量のウィンドウを出す嫌がらせ
+        for(let i=0; i<5; i++) createMalwareWindow();
+    }
+
+    function speak(text) {
+        // 音声合成
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US'; // 英語の方が怖い
+        utterance.pitch = 0.5; // 低い声
+        utterance.rate = 0.8; // ゆっくり
+        synth.speak(utterance);
+    }
+
+    // 逃げるテキストの生成（画面を這い回る）
+    setInterval(() => {
+        if (decay > 5) {
+            const el = document.createElement('div');
+            el.className = 'runner';
+            el.innerText = Math.random() > 0.5 ? "ERROR" : "010101";
+            el.style.left = Math.random() * window.innerWidth + 'px';
+            el.style.top = Math.random() * window.innerHeight + 'px';
+            document.body.appendChild(el);
+            
+            // 2秒後に消える
+            setTimeout(() => el.remove(), 2000);
+        }
+    }, 500);
+
+</script>
+
+</body>
+</html>

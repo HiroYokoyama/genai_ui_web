@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural UI Constructor Concept</title>
+<style>
+    :root {
+        --primary-color: #00f7ff; /* ネオンブルー */
+        --secondary-color: #ff00dd; /* ネオンピンク */
+        --bg-color: #050508;
+        --panel-bg: #0a0a0f;
+        --text-color: #e0e0ff;
+    }
+
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* ヘッダー */
+    header {
+        padding: 15px 20px;
+        background: #000;
+        border-bottom: 1px solid #333;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    h1 { margin: 0; font-size: 1.2rem; letter-spacing: 1px; }
+    .brand-accent { color: var(--primary-color); }
+    
+    /* メインレイアウト */
+    .container {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+    }
+
+    /* 左サイドバー：AIログ */
+    .sidebar {
+        width: 300px;
+        background: var(--panel-bg);
+        border-right: 1px solid #222;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+    .log-title {
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: var(--primary-color);
+        display: flex;
+        align-items: center;
+    }
+    .log-title::before {
+        content: '';
+        display: inline-block;
+        width: 10px; height: 10px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        margin-right: 10px;
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0% { opacity: 0.5; box-shadow: 0 0 0 0px rgba(0, 247, 255, 0.5); } 70% { opacity: 1; box-shadow: 0 0 0 10px rgba(0, 247, 255, 0); } 100% { opacity: 0.5; box-shadow: 0 0 0 0px rgba(0, 247, 255, 0); } }
+    
+    #log-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        flex: 1;
+        overflow-y: auto;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.9rem;
+    }
+    .log-item {
+        margin-bottom: 8px;
+        opacity: 0;
+        animation: fadeIn 0.3s forwards;
+        border-left: 2px solid #333;
+        padding-left: 8px;
+    }
+    .log-item.highlight { border-color: var(--primary-color); color: #fff; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* 右メイン：UI生成キャンバス */
+    .main-canvas {
+        flex: 1;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at center, #0f0f1a 0%, #050508 100%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* グリッド背景 */
+    .grid-bg {
+        position: absolute;
+        top:0; left:0; width:100%; height:100%;
+        background-image: linear-gradient(rgba(0, 247, 255, 0.1) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(0, 247, 255, 0.1) 1px, transparent 1px);
+        background-size: 30px 30px;
+        pointer-events: none;
+    }
+
+    #generate-btn {
+        padding: 15px 40px;
+        background: transparent;
+        border: 2px solid var(--primary-color);
+        color: var(--primary-color);
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+        z-index: 10;
+    }
+    #generate-btn:hover { background: var(--primary-color); color: #000; box-shadow: 0 0 20px var(--primary-color); }
+
+    /* 生成されるUIパーツの共通スタイル */
+    .ui-part {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px dashed rgba(0, 247, 255, 0.3); /* 初期はワイヤーフレーム調 */
+        box-sizing: border-box;
+        opacity: 0;
+        transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    /* 生成アニメーション */
+    .ui-part.generating {
+        opacity: 1;
+        transform: scale(1);
+        animation: scanline 1s linear forwards;
+    }
+    @keyframes scanline {
+        0% { clip-path: inset(0 100% 0 0); border-color: var(--primary-color); }
+        100% { clip-path: inset(0 0 0 0); border-color: rgba(0, 247, 255, 0.3); }
+    }
+
+    /* 完成状態のスタイル上書き */
+    .ui-part.completed {
+        border-style: solid;
+        border-color: #333;
+        background: #1a1a20;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    /* 各パーツ固有のデザイン */
+    .type-header { background: #000 !important; border-bottom: 2px solid var(--primary-color) !important; display: flex; align-items: center; padding: 0 20px; font-weight: bold; }
+    .type-sidebar { background: #111 !important; border-right: 1px solid #333 !important; }
+    .type-card { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+    .type-card::before { content:''; display:block; width: 40%; height: 10px; background: #333; margin-bottom: 10px; } /* タイトル風 */
+    .type-card::after { content:''; display:block; flex:1; background: rgba(0, 247, 255, 0.1); } /* コンテンツ風 */
+    .type-button { background: var(--primary-color) !important; color:#000; display:flex; justify-content:center; align-items:center; font-weight:bold; border:none !important;}
+    
+    #ui-container {
+        position: relative;
+        width: 800px;
+        height: 500px;
+        /* background: rgba(0,0,0,0.5); */
+        display: none; /* 初期は非表示 */
+        box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    }
+
+</style>
+</head>
+<body>
+
+<header>
+    <h1>NEURAL <span class="brand-accent">UI</span> CONSTRUCTOR</h1>
+    <div style="font-size: 0.8rem; opacity: 0.7;">v0.9.2 (Concept Demo)</div>
+</header>
+
+<div class="container">
+    <div class="sidebar">
+        <div class="log-title">AI PROCESSING LOG</div>
+        <ul id="log-list">
+            <li class="log-item">System ready. Awaiting input prompt.</li>
+        </ul>
+    </div>
+
+    <div class="main-canvas">
+        <div class="grid-bg"></div>
+        <button id="generate-btn" onclick="startGeneration()">INITIALIZE GENERATION SEQUENCE</button>
+        <div id="ui-container"></div>
+    </div>
+</div>
+
+<script>
+    const logList = document.getElementById('log-list');
+    const uiContainer = document.getElementById('ui-container');
+    const genBtn = document.getElementById('generate-btn');
+
+    // ログ追加関数
+    function addLog(message, highlight = false) {
+        const li = document.createElement('li');
+        li.className = 'log-item' + (highlight ? ' highlight' : '');
+        
+        // タイムスタンプ
+        const now = new Date();
+        const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}.${String(now.getMilliseconds()).padStart(3,'0').slice(0,2)}`;
+        
+        li.innerHTML = `<span style="opacity:0.5; font-size:0.8em;">[${time}]</span> ${message}`;
+        logList.appendChild(li);
+        logList.scrollTop = logList.scrollHeight;
+    }
+
+    // UIパーツの定義（シナリオデータ）
+    const scenarios = [
+        {
+            name: "Corporate Dashboard",
+            parts: [
+                { type: 'header', top:0, left:0, width:800, height:60, log: "Parsing layout structure: Header..." },
+                { type: 'sidebar', top:60, left:0, width:200, height:440, log: "Generating Navigation Sidebar..." },
+                { type: 'card', top:80, left:220, width:560, height:150, log: "Synthesizing Main Stats Widget..." },
+                { type: 'card', top:250, left:220, width:270, height:230, log: "Creating Data Visualization Panel A..." },
+                { type: 'card', top:250, left:510, width:270, height:230, log: "Creating Data Visualization Panel B..." }
+            ]
+        },
+        {
+            name: "SaaS Login Screen",
+            parts: [
+                { type: 'card', top:100, left:250, width:300, height:300, log: "Defining Center Auth Container..." },
+                { type: 'header', top:100, left:250, width:300, height:50, log: "Adding Form Title & Logo Placeholder..." }, // カード内の擬似ヘッダー
+                { type: 'card', top:170, left:270, width:260, height:40, log: "Generating Email Input Field..." },
+                { type: 'card', top:220, left:270, width:260, height:40, log: "Generating Password Input Field..." },
+                { type: 'button', top:280, left:270, width:260, height:50, text:"LOGIN", log: "Compiling Action Button (LOGIN)..." }
+            ]
+        }
+    ];
+
+    let isGenerating = false;
+
+    function startGeneration() {
+        if(isGenerating) return;
+        isGenerating = true;
+
+        // リセット
+        uiContainer.innerHTML = '';
+        uiContainer.style.display = 'none';
+        genBtn.style.display = 'none';
+        logList.innerHTML = '';
+        addLog("Sequence Initiated.", true);
+        
+        // シナリオ選択
+        const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+        setTimeout(()=>{
+            addLog(`Prompt detected: "Generate a ${scenario.name}"`, true);
+            addLog("AI Model loading... (NeuralUI-Transformer-XL)");
+        }, 500);
+
+        setTimeout(()=>{
+             uiContainer.style.display = 'block';
+             generateStep(scenario.parts, 0);
+        }, 1500);
+    }
+
+    function generateStep(parts, index) {
+        if (index >= parts.length) {
+            // 完了処理
+            setTimeout(()=>{
+                addLog("Finalizing UI rendering passes...", true);
+                // 全パーツを完成状態にする
+                document.querySelectorAll('.ui-part').forEach(el => el.classList.add('completed'));
+            }, 500);
+            setTimeout(()=>{
+                addLog("Generation Complete. Waiting for user interaction.", true);
+                genBtn.innerText = "GENERATE ANOTHER SCENE";
+                genBtn.style.display = 'block';
+                isGenerating = false;
+            }, 1500);
+            return;
+        }
+
+        const partData = parts[index];
+        addLog(partData.log);
+
+        // DOM生成
+        const el = document.createElement('div');
+        el.className = `ui-part type-${partData.type}`;
+        el.style.top = partData.top + 'px';
+        el.style.left = partData.left + 'px';
+        el.style.width = partData.width + 'px';
+        el.style.height = partData.height + 'px';
+        if(partData.text) el.innerText = partData.text;
+
+        uiContainer.appendChild(el);
+
+        // アニメーション開始（少し遅らせることで出現感が出る）
+        setTimeout(() => {
+            el.classList.add('generating');
+        }, 50);
+
+        // 次のステップへ
+        setTimeout(() => {
+            generateStep(parts, index + 1);
+        }, 800); // 生成間隔
+    }
+
+</script>
+</body>
+</html>

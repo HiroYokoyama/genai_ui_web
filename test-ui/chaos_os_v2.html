@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generative Chaos OS v2.0</title>
+<style>
+    :root {
+        --main-color: #0f0;
+        --bg-color: #050505;
+        --warn-color: #ff0055;
+    }
+    body {
+        background-color: var(--bg-color);
+        color: var(--main-color);
+        font-family: 'Courier New', Courier, monospace;
+        overflow: hidden;
+        margin: 0;
+        height: 100vh;
+        perspective: 1000px; /* 3D効果用 */
+        transition: filter 0.2s;
+    }
+
+    /* 画面全体を包むコンテナ（歪ませる用） */
+    #universe {
+        width: 100%;
+        height: 100%;
+        transition: transform 0.5s cubic-bezier(0.1, 0.7, 1.0, 0.1);
+        transform-style: preserve-3d;
+    }
+
+    /* ヘッダー */
+    header {
+        background: #000;
+        padding: 10px;
+        border-bottom: 2px solid var(--main-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+        position: relative;
+    }
+
+    /* メニュー */
+    .menu-item {
+        cursor: pointer;
+        padding: 5px 15px;
+        border: 1px solid transparent;
+        position: relative;
+        user-select: none;
+    }
+    .menu-item:hover {
+        background: var(--main-color);
+        color: #000;
+        animation: jitter 0.2s infinite;
+    }
+
+    /* AIアシスタント */
+    #ai-agent {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 250px;
+        background: #000;
+        border: 2px solid var(--warn-color);
+        padding: 15px;
+        font-size: 0.9rem;
+        box-shadow: 5px 5px 0px var(--warn-color);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    #ai-face {
+        font-size: 2rem;
+        text-align: center;
+    }
+
+    /* 生成されるウィンドウ */
+    .window {
+        position: absolute;
+        background: rgba(0, 20, 0, 0.9);
+        border: 1px solid var(--main-color);
+        box-shadow: 0 0 15px var(--main-color);
+        display: flex;
+        flex-direction: column;
+        color: var(--main-color);
+        animation: popUp 0.3s ease-out;
+    }
+    .win-header {
+        background: var(--main-color);
+        color: #000;
+        padding: 5px;
+        font-weight: bold;
+        cursor: move;
+        display: flex;
+        justify-content: space-between;
+    }
+    .win-content {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* 逃げるボタン */
+    button {
+        background: transparent;
+        border: 1px solid var(--main-color);
+        color: var(--main-color);
+        padding: 5px 10px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    button:hover {
+        background: var(--main-color);
+        color: #000;
+    }
+
+    /* アニメーション定義 */
+    @keyframes jitter {
+        0% { transform: translate(0,0); }
+        25% { transform: translate(2px,2px); }
+        50% { transform: translate(-2px,0); }
+        75% { transform: translate(0,-2px); }
+        100% { transform: translate(0,0); }
+    }
+    @keyframes popUp {
+        0% { transform: scale(0); }
+        80% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    .glitch-text {
+        position: relative;
+    }
+</style>
+</head>
+<body>
+
+<div id="universe" onclick="handleClick(event)">
+    <header onclick="event.stopPropagation()">
+        <h1>OS_CHAOS <span style="font-size:0.5em" id="entropy-display">Entropy: 0%</span></h1>
+        <div style="display:flex; gap:10px;">
+            <div class="menu-item" onmouseover="glitchText(this)">FILE</div>
+            <div class="menu-item" onmouseover="glitchText(this)">EDIT</div>
+            <div class="menu-item" onmouseover="glitchText(this)">VIEW</div>
+            <div class="menu-item" onmouseover="glitchText(this)">HELP</div>
+        </div>
+    </header>
+
+    </div>
+
+<div id="ai-agent">
+    <div id="ai-face">(O_O)</div>
+    <div id="ai-msg">システム正常。あなたの操作を監視しています。</div>
+</div>
+
+<script>
+    let entropy = 0;
+    const aiFace = document.getElementById('ai-face');
+    const aiMsg = document.getElementById('ai-msg');
+    const universe = document.getElementById('universe');
+    const entropyDisplay = document.getElementById('entropy-display');
+
+    // AIのセリフ集
+    const aiComments = [
+        "そのクリックは必要でしたか？",
+        "メモリを消費しています...",
+        "UIを再構成中（嘘）",
+        "あなたのマウス操作は独特ですね。",
+        "保存しますか？ 保存先はありませんが。",
+        "エラー: ユーザーの意思が不明瞭です。",
+        "画面を少し傾けておきました。",
+        "休憩したほうがいいのでは？",
+        "CSSが悲鳴を上げています。",
+        "404 Not Found",
+        "システムがあなたの感情を計算中..."
+    ];
+
+    const aiFaces = ["(O_O)", "(>_<)", "(-_-)", "(^o^)", "(?_?)", "(X_X)", "(^_^;)"];
+
+    // 文字化け用文字
+    const glitchChars = "!@#$%^&*()_+-={}[]|;:,.<>?/";
+
+    // クリック時のメイン処理
+    function handleClick(e) {
+        // AIが喋る
+        updateAI();
+        
+        // エントロピー（カオス度）上昇
+        increaseEntropy();
+
+        // ウィンドウ生成
+        createWindow(e.clientX, e.clientY);
+    }
+
+    function updateAI() {
+        if(Math.random() > 0.3) {
+            aiMsg.innerText = aiComments[Math.floor(Math.random() * aiComments.length)];
+            aiFace.innerText = aiFaces[Math.floor(Math.random() * aiFaces.length)];
+        }
+    }
+
+    function increaseEntropy() {
+        entropy += 2;
+        entropyDisplay.innerText = `Entropy: ${entropy}%`;
+        
+        // 画面を歪ませる
+        const rotX = (Math.random() - 0.5) * entropy * 0.5;
+        const rotY = (Math.random() - 0.5) * entropy * 0.5;
+        const scale = 1 - (entropy * 0.001);
+        
+        universe.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${scale})`;
+        
+        // 色味を変える
+        if(entropy > 50) {
+            document.body.style.filter = `hue-rotate(${entropy}deg) contrast(${100 + entropy}%)`;
+        }
+    }
+
+    function createWindow(x, y) {
+        const win = document.createElement('div');
+        win.className = 'window';
+        
+        // ランダムなサイズ
+        const w = Math.random() * 300 + 150;
+        const h = Math.random() * 200 + 100;
+        win.style.width = w + 'px';
+        win.style.height = h + 'px';
+        
+        // クリック位置を中心に
+        win.style.left = (x - w/2) + 'px';
+        win.style.top = (y - h/2) + 'px';
+
+        // タイトルバー
+        const header = document.createElement('div');
+        header.className = 'win-header';
+        header.innerHTML = `<span>Task_${Math.floor(Math.random()*1000)}</span> <span style="cursor:pointer" onclick="this.parentElement.parentElement.remove()">[X]</span>`;
+        win.appendChild(header);
+
+        // コンテンツ（ランダム生成）
+        const content = document.createElement('div');
+        content.className = 'win-content';
+        
+        // 中身のパターン
+        const type = Math.floor(Math.random() * 3);
+        
+        if (type === 0) {
+            // 無限プログレスバー
+            content.innerHTML = `<p>処理しています...</p><div style="width:100%; height:10px; background:#333;"><div style="width:${Math.random()*100}%; height:100%; background:var(--main-color);"></div></div>`;
+        } else if (type === 1) {
+            // 意味のないボタン群
+            content.innerHTML = `<p>選択してください</p>`;
+            const btnText = ["はい", "いいえ", "たぶん", "拒否", "保留"];
+            const btn = document.createElement('button');
+            btn.innerText = btnText[Math.floor(Math.random()*btnText.length)];
+            btn.onclick = (e) => { e.stopPropagation(); alert('その操作は無効です'); };
+            content.appendChild(btn);
+        } else {
+            // エラーメッセージ
+            content.innerHTML = `<p style="color:var(--warn-color)">致命的な例外</p><p>Error: 0x${Math.floor(Math.random()*999999).toString(16)}</p>`;
+        }
+
+        win.appendChild(content);
+        
+        // 生成されたウィンドウをクリックしても親(universe)のクリックイベント（＝ウィンドウ生成）が発火しないようにする
+        // ...あえて発火させて「無限増殖」させるのも面白いが、使い勝手を考慮して止める
+        win.onclick = (e) => { e.stopPropagation(); updateAI(); };
+
+        universe.appendChild(win);
+    }
+
+    // 文字化けエフェクト
+    function glitchText(element) {
+        const originalText = element.innerText;
+        let count = 0;
+        
+        const interval = setInterval(() => {
+            let newText = "";
+            for(let i=0; i<originalText.length; i++) {
+                newText += glitchChars[Math.floor(Math.random() * glitchChars.length)];
+            }
+            element.innerText = newText;
+            count++;
+            
+            if(count > 5) {
+                clearInterval(interval);
+                element.innerText = originalText; // 元に戻る（か、戻らないか...）
+                // たまに戻らないバグ仕様を入れる
+                if(Math.random() > 0.9) element.innerText = "ERROR"; 
+            }
+        }, 50);
+    }
+
+    // 定期的にAIが独り言をいう
+    setInterval(() => {
+        if(Math.random() > 0.7) updateAI();
+    }, 5000);
+
+</script>
+
+</body>
+</html>
