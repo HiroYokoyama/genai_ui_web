@@ -291,7 +291,7 @@
                 serverInput.value = window.location.origin.includes('8001') ? "http://127.0.0.1:8000" : (localStorage.getItem('server_url') || "http://127.0.0.1:8000");
             } else if (provider === 'gemini') {
                 // More robust Gemini OpenAI-compatible base
-                llmUrlInput.value = "https://generativelanguage.googleapis.com/v1beta/";
+                llmUrlInput.value = "https://generativelanguage.googleapis.com/v1beta/openai/";
                 modelInput.value = "gemini-1.5-pro-latest";
                 serverInput.value = "http://127.0.0.1:8001";
             } else if (provider === 'local') {

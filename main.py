@@ -76,6 +76,13 @@ async def get_models(llm_url: str = "", api_key: str = ""):
         # ユーザーの入力ミス (ttps 等) への簡易的な対応
         if llm_url.startswith("ttp"):
             llm_url = "h" + llm_url
+        
+        # Google API URL の場合は /openai/ が含まれているかチェック
+        if "generativelanguage.googleapis.com" in llm_url and "/openai/" not in llm_url:
+            if not llm_url.endswith("/"):
+                llm_url += "/"
+            llm_url += "openai/"
+            print(f"Corrected Gemini URL to: {llm_url}")
 
     client_args = {"api_key": api_key}
     if llm_url:
@@ -89,8 +96,8 @@ async def get_models(llm_url: str = "", api_key: str = ""):
         error_msg = str(e)
         print(f"Error fetching models: {error_msg}")
         # URL関連のエラーなら詳細を返す
-        if "base_url" in error_msg or "URL" in error_msg:
-            raise HTTPException(status_code=400, detail=f"Invalid LLM URL: {error_msg}")
+        if "base_url" in error_msg or "URL" in error_msg or "404" in error_msg:
+            raise HTTPException(status_code=400, detail=f"Invalid LLM URL (Did you include /openai/ for Gemini?): {error_msg}")
         raise HTTPException(status_code=500, detail=error_msg)
 
 @app.post("/generate")
