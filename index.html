@@ -117,7 +117,7 @@
                 <button onclick="fetchModels()"
                     class="bg-indigo-500 hover:bg-indigo-600 text-white rounded-r-lg px-2 py-2 text-[10px] transition-colors shadow-sm"
                     title="Fetch Models">
-                    🔄
+                    Refresh
                 </button>
                 <datalist id="model-list"></datalist>
             </div>
@@ -428,12 +428,12 @@
                 <p class="text-slate-500 text-lg">Type your idea below to start. Every button in the generated UI will act as a new instruction for the AI.</p>
                 <div class="grid grid-cols-2 gap-4 pt-4">
                     <div onclick="sendAction('Create an Analytics Dashboard')" class="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white cursor-pointer transition-all text-left group">
-                        <span class="text-xl block mb-2">📊</span>
+                        <span class="text-xl block mb-2 font-bold text-indigo-500">Analytics</span>
                         <p class="text-xs font-bold text-slate-400 group-hover:text-indigo-600">SAMPLE MESSAGE</p>
                         <p class="text-sm font-medium text-slate-700">Analytics Dashboard</p>
                     </div>
                     <div onclick="sendAction('Create a Luxury Brand Login')" class="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white cursor-pointer transition-all text-left group">
-                        <span class="text-xl block mb-2">💎</span>
+                        <span class="text-xl block mb-2 font-bold text-indigo-500">Luxury</span>
                         <p class="text-xs font-bold text-slate-400 group-hover:text-indigo-600">SAMPLE MESSAGE</p>
                         <p class="text-sm font-medium text-slate-700">Luxury Brand Login</p>
                     </div>
